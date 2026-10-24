@@ -6,8 +6,8 @@
 # Download and install Ollama in Windows
 irm https://ollama.com/install.ps1 | iex
 
-# Pull DeepSeek-R1 model (takes around 5GB storage)
-ollama pull deepseek-r1
+# Pull DeepSeek-R1:1.5b model (a lighter version of deepseek-r1)
+ollama pull deepseek-r1:1.5b
 
 # Install dependencies
 pip install pydantic==2.10.1 chainlit ollama

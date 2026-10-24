@@ -1,5 +1,8 @@
 import chainlit as cl
-import ollama
+from ollama import AsyncClient
+
+MODEL_NAME = "deepseek-r1:1.5b"
+
 
 @cl.on_chat_start
 async def start_chat():
@@ -7,44 +10,42 @@ async def start_chat():
         "interaction",
         [
             {
-                "role":"system",
-                "content":"Hello"
+                "role": "system",
+                "content": "You are a helpful AI assistant named Liang Hao.",
             }
         ],
     )
 
     msg = cl.Message(content="")
-
     start_message = "Hello, I am Liang Hao. An artificial intelligence running in your local machine. How can I help you today?"
 
-    for token in start_message:
-        await msg.stream_token(token)
+    for char in start_message:
+        await msg.stream_token(char)
 
     await msg.send()
 
-@cl.step(type="tool")
-async def tool(input_message):
-
-    interaction = cl.user_session.get("interaction")
-
-    interaction.append({"role":"user",
-                        "content":input_message})
-
-    response = ollama.chat(model="deepseek-r1",
-                           messages=interaction)
-
-    interaction.append({"role":"assistant",
-                        "content":response.message.content})
-
-    return response
 
 @cl.on_message
 async def main(message: cl.Message):
-
-    tool_res = await tool(message.content)
+    interaction = cl.user_session.get("interaction")
+    interaction.append({"role": "user", "content": message.content})
 
     msg = cl.Message(content="")
-    for token in tool_res.message.content:
-        await msg.stream_token(token)
-
     await msg.send()
+
+    client = AsyncClient()
+    response_stream = await client.chat(
+        model=MODEL_NAME,
+        messages=interaction,
+        stream=True,
+    )
+
+    full_response = ""
+    async for chunk in response_stream:
+        token = chunk.message.content
+        if token:
+            full_response += token
+            await msg.stream_token(token)
+
+    interaction.append({"role": "assistant", "content": full_response})
+    await msg.update()
